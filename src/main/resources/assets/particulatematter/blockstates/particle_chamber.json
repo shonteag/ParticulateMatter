@@ -1,0 +1,16 @@
+{
+	"forge_marker": 1,
+	"variants": {
+		"normal": {
+			"model": "particulatematter:particle_chamber",
+			"transform": "forge:default-block",
+			"textures": {
+				"particle": "particulatematter:blocks/model_base"
+			}
+		},
+		"inventory": {
+			"model": "particulatematter:particle_chamber",
+			"transform": "forge:default-block"
+		}
+	}
+}

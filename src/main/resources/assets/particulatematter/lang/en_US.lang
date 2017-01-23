@@ -1,0 +1,8 @@
+# Item Names
+item.particulate_wrench.name=Particulate Wrench
+item.particle_container.name=Particle Container
+
+# Block Names
+tile.centrifuge_block.name=Centrifuge Block
+tile.particle_chamber.name=Particle Chamber
+tile.laser.name=Laser
