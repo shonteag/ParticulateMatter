@@ -23,7 +23,7 @@ public class ParticulateMatter {
     public static ParticulateMatter instance;
 
     @SidedProxy(serverSide = "ramil.particulatematter.proxy.CommonProxy", clientSide = "ramil.particulatematter.proxy.ClientProxy")
-    public static ramil.particulatematter.proxy.ClientProxy proxy;
+    public static ramil.particulatematter.proxy.CommonProxy proxy;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -36,8 +36,6 @@ public class ParticulateMatter {
         }
 
         ModItems.init();
-        ModItems.initClient();
-
         ModBlocks.init();
 
         proxy.preInit(event);
@@ -46,10 +44,12 @@ public class ParticulateMatter {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
 
+        proxy.init(event);
     }
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
 
+        proxy.postInit(event);
     }
 }

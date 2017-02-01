@@ -1,4 +1,4 @@
-package ramil.particulatematter.block;
+package ramil.particulatematter.tile;
 
 
 import net.minecraft.tileentity.TileEntity;

@@ -1,4 +1,4 @@
-package ramil.particulatematter.tile;
+package ramil.particulatematter.laser;
 
 
 import cofh.api.energy.IEnergyReceiver;
@@ -10,10 +10,13 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.energy.IEnergyStorage;
-import ramil.particulatematter.block.ITileEntityLinkable;
-import ramil.particulatematter.particlegen.TileEntityParticleChamber;
+import ramil.particulatematter.chamber.TileEntityParticleChamber;
 import ramil.particulatematter.energy.PMEnergyStorage;
+import ramil.particulatematter.tile.BaseTileEntity;
+import ramil.particulatematter.tile.ITileEntityLinkable;
+import ramil.particulatematter.util.NbtUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,25 +24,41 @@ import java.util.List;
 public class TileEntityLaser extends BaseTileEntity implements IEnergyStorage, IEnergyReceiver, ITeslaConsumer, ITileEntityLinkable {
 
     public PMEnergyStorage storage = new PMEnergyStorage(1000000, 100000, 100000);
-    public TileEntityParticleChamber chamber = null;
-    public int charge_per_fire = 1000;
+    public BlockPos link = null;
+    public int charge_per_fire = 10;
+    public boolean fired_this_tick = false;
 
     public TileEntityLaser() {
 
     }
 
-
     @Override
     public void update() {
+        this.fired_this_tick = false;
+
         // if the laser is linked and the laser has a redstone signal
-        if (this.chamber != null && getWorld().isBlockPowered(this.getPos())) {
+        if (this.getLinked() != null && getWorld().isBlockPowered(this.getPos())) {
             // fire the laser
-            if (this.storage.extractEnergy(charge_per_fire, true) == charge_per_fire) {
-                // if we have enough energy to fire, fire!
-                this.storage.extractEnergy(charge_per_fire, false);
-                this.chamber.addCharge(charge_per_fire);
+            int fire_cost = SettingsLaser.FIRE_COST + charge_per_fire;
+
+            if (this.storage.extractEnergy(fire_cost, true) == fire_cost) {
+                // check to see if it's still valid
+                if (this.getLinked() instanceof TileEntityParticleChamber) {
+                    // if we have enough energy to fire, fire!
+                    this.storage.extractEnergy(fire_cost, false);
+                    // add charge to target
+                    this.getLinked().addCharge(this.charge_per_fire);
+                    // update fired tracker
+                    this.fired_this_tick = true;
+                }
+                else {
+                    // no longer valid link
+                    this.link = null;
+                }
             }
         }
+
+        this.markDirty();
 
         IBlockState state = world.getBlockState(getPos());
         world.notifyBlockUpdate(getPos(), state, state, 3);
@@ -47,17 +66,29 @@ public class TileEntityLaser extends BaseTileEntity implements IEnergyStorage, I
         super.update();
     }
 
+    @Override
+    public boolean shouldRenderInPass(int pass) {
+        return pass == 1;
+    }
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound tagCompound) {
+        super.writeToNBT(tagCompound);
         tagCompound.setInteger("energy", storage.getEnergyStored());
-        return super.writeToNBT(tagCompound);
+
+        // link
+        NbtUtil.writePos(tagCompound, "chamber", this.link);
+
+        return tagCompound;
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tagCompound) {
-        this.storage.setEnergy(tagCompound.getInteger("energy"));
         super.readFromNBT(tagCompound);
+        this.storage.setEnergy(tagCompound.getInteger("energy"));
+
+        // link
+        this.link = NbtUtil.readPos(tagCompound, "chamber");
     }
 
 
@@ -155,10 +186,18 @@ public class TileEntityLaser extends BaseTileEntity implements IEnergyStorage, I
     @Override
     public boolean establishLink(TileEntity te_link_to) {
         if (te_link_to instanceof TileEntityParticleChamber) {
-            this.chamber = (TileEntityParticleChamber)te_link_to;
+            this.link = te_link_to.getPos();
+            this.markDirty();
             return true;
         }
         return false;
+    }
+
+    public TileEntityParticleChamber getLinked() {
+        if (link != null && getWorld().getTileEntity(link) instanceof TileEntityParticleChamber) {
+            return (TileEntityParticleChamber) getWorld().getTileEntity(link);
+        }
+        return null;
     }
     /*
     end linking

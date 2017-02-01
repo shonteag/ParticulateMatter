@@ -1,4 +1,4 @@
-package ramil.particulatematter.particlegen;
+package ramil.particulatematter.chamber;
 
 
 public enum EnumParticleDeath {

@@ -1,22 +1,30 @@
-package ramil.particulatematter.particlegen;
+package ramil.particulatematter.chamber;
 
 
 import com.sun.istack.internal.Nullable;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.ItemStackHelper;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.energy.IEnergyStorage;
-import ramil.particulatematter.block.ITileEntityLinkable;
+import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
+import ramil.particulatematter.tile.ITileEntityLinkable;
 import ramil.particulatematter.energy.PMEnergyStorage;
+import ramil.particulatematter.item.ItemParticleContainer;
+import ramil.particulatematter.item.Particle;
 import ramil.particulatematter.tile.BaseTileEntity;
 
 import java.util.ArrayList;
 import java.util.List;
-
 
 public class TileEntityParticleChamber extends BaseTileEntity implements ITileEntityLinkable {
 
@@ -24,10 +32,22 @@ public class TileEntityParticleChamber extends BaseTileEntity implements ITileEn
     public Particle particle;
     private int charge_on_tick = 0;
 
+    public static final int SIZE = 2;
+
 
     public TileEntityParticleChamber() {
-        this.particle = new Particle("creative_particle", 1000, 10000, 0, 5000, 2000, 1000);
+        this.particle = null;
     }
+
+    // This item handler will hold our nine inventory slots
+    private ItemStackHandler itemStackHandler = new ItemStackHandler(SIZE) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            // We need to tell the tile entity that something has changed so
+            // that the chest contents is persisted
+            TileEntityParticleChamber.this.markDirty();
+        }
+    };
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound tagCompound) {
@@ -70,40 +90,65 @@ public class TileEntityParticleChamber extends BaseTileEntity implements ITileEn
     @Override
     public void update() {
 
-        if (!getWorld().isRemote) { // server
-
-            // check for redstone signal
+        // check for redstone signal
+        if (this.particle != null) {
             if (getWorld().isBlockPowered(this.getPos())) {
                 // tick the particle, if it exists
-                if (this.particle != null) {
-                    if (this.particle.isActive()) {
-                        // fire the particle, if it is active
-                        this.storage.receiveEnergy(this.particle.tick(this.charge_on_tick), false);
-                    } else {
-                        // if inactive, remove particle, waste laser charge
-                        // potential negative effects?
-                        if (this.particle.death_type == EnumParticleDeath.OVERCHARGE) {
-                            world.createExplosion((Entity) null, this.getPos().getX(), this.getPos().getY(), this.getPos().getZ(), 3.0F, false);
-                        }
-                        else if (this.particle.death_type == EnumParticleDeath.UNDERCHARGE) {
-                            // black hole maybe?
-                        }
+                if (this.particle.isActive()) {
+                    // fire the particle, if it is active
+                    int rfReturn = this.particle.tick(this.charge_on_tick);
+                    this.storage.receiveEnergy(rfReturn, false);
 
-                        this.particle = null;
-                        this.charge_on_tick = 0;
+                    // this little f*cker cost me 3 hours of time. RESET THE DAMN CHARGE PER TICK COUNT!
+                    this.charge_on_tick = 0;
+                } else {
+                    // if inactive, remove particle, waste laser charge
+                    // potential negative effects?
+                    if (this.particle.death_type == EnumParticleDeath.OVERCHARGE) {
+                        // world.createExplosion((Entity) null, this.getPos().getX(), this.getPos().getY(), this.getPos().getZ(), 3.0F, false);
                     }
+                    else if (this.particle.death_type == EnumParticleDeath.UNDERCHARGE) {
+                        // black hole maybe?
+                    }
+                    System.out.println("particulatematter:particle_death:" + this.particle.death_type + ":" + this.getPos().toString());
+
+                    this.particle = null;
+                    this.charge_on_tick = 0;
                 }
             }
+        }
+        else {
+            // waste the charge
+            this.charge_on_tick = 0;
 
-        } else { // client
-
+            // there is no particle, check the stacks
+            ItemStack stack = this.itemStackHandler.getStackInSlot(0);
+            if (stack.getItem() instanceof ItemParticleContainer && ((ItemParticleContainer)stack.getItem()).extractParticle(stack, true) != null) {
+                stack = this.itemStackHandler.extractItem(0, 1, true);
+                this.itemStackHandler.setStackInSlot(0, new ItemStack(new ItemParticleContainer(), 0));
+                this.particle = ((ItemParticleContainer) stack.getItem()).extractParticle(stack, false);
+                this.itemStackHandler.insertItem(1, stack, false);
+            }
         }
 
         this.markDirty();
+
         IBlockState state = world.getBlockState(getPos());
         world.notifyBlockUpdate(getPos(), state, state, 3);
 
         super.update();
+    }
+
+    public boolean isItemValidForSlot(ItemStack stack, int index) {
+        if (index == 1)
+            return false;
+
+        // if slot is insert (0), if the stack is not null, if the stack is an ItemParticleContainer, and if the ItemParticleContainer has a particle
+        else if (index == 0 && stack != null && stack.getItem() instanceof ItemParticleContainer && ((ItemParticleContainer) stack.getItem()).extractParticle(stack, true) != null)
+            return true;
+
+        else
+            return false;
     }
 
     @Override
@@ -163,5 +208,30 @@ public class TileEntityParticleChamber extends BaseTileEntity implements ITileEn
         // Here we get the packet from the server and read it into our client side tile entity
         this.readFromNBT(packet.getNbtCompound());
     }
+
+    /*
+    Item Slots
+     */
+    @Override
+    public boolean hasCapability(Capability<?> capability, EnumFacing facing) {
+        if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY || capability == CapabilityEnergy.ENERGY) {
+            return true;
+        }
+        return super.hasCapability(capability, facing);
+    }
+
+    @Override
+    public <T> T getCapability(Capability<T> capability, EnumFacing facing) {
+        if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+            return (T) itemStackHandler;
+        }
+        return super.getCapability(capability, facing);
+    }
+
+    public boolean canInteractWith(EntityPlayer playerIn) {
+        // If we are too far away from this tile entity you cannot use it
+        return !isInvalid() && playerIn.getDistanceSq(pos.add(0.5D, 0.5D, 0.5D)) <= 64D;
+    }
+
 
 }

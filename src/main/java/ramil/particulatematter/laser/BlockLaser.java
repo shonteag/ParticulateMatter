@@ -1,25 +1,19 @@
-package ramil.particulatematter.block;
+package ramil.particulatematter.laser;
 
-import net.minecraft.block.BlockDirectional;
-import net.minecraft.block.BlockHorizontal;
 import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.properties.PropertyDirection;
-import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import ramil.particulatematter.block.BlockTileEntity;
 import ramil.particulatematter.energy.PMEnergyStorage;
-import ramil.particulatematter.tile.TileEntityLaser;
+
+import javax.annotation.Nullable;
 
 public class BlockLaser extends BlockTileEntity<TileEntityLaser> {
 
@@ -47,14 +41,20 @@ public class BlockLaser extends BlockTileEntity<TileEntityLaser> {
             if (te.storage != null) {
                 if (world.isRemote) player.sendMessage(new TextComponentString("Energy stored: " + ((PMEnergyStorage) te.storage).getEnergyStored()));
             }
-            if (te.chamber != null) {
-                if (world.isRemote) player.sendMessage(new TextComponentString("Linked to chamber at: " + te.chamber.getPos().toString()));
+            if (te.getLinked() != null) {
+                if (world.isRemote) player.sendMessage(new TextComponentString("Linked to chamber at: " + te.getLinked().getPos().toString()));
             }
             return true;
         }
 
         return false;
     }
+
+//    @Override
+//    public boolean canConnectRedstone(IBlockState state, IBlockAccess world, BlockPos pos, @Nullable EnumFacing side) {
+//        return true;
+//    }
+
 
     @SideOnly(Side.CLIENT)
     @Override

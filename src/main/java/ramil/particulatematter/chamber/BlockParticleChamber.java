@@ -1,4 +1,4 @@
-package ramil.particulatematter.particlegen;
+package ramil.particulatematter.chamber;
 
 
 import com.sun.istack.internal.Nullable;
@@ -9,16 +9,17 @@ import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import ramil.particulatematter.ParticulateMatter;
 import ramil.particulatematter.block.BlockTileEntity;
-import ramil.particulatematter.energy.PMEnergyStorage;
+import ramil.particulatematter.item.ItemParticulateWrench;
 
 public class BlockParticleChamber extends BlockTileEntity<TileEntityParticleChamber> {
 
+    public static final int GUI_ID = 1;
 
     public BlockParticleChamber() {
         super(Material.IRON, "particle_chamber");
@@ -38,28 +39,21 @@ public class BlockParticleChamber extends BlockTileEntity<TileEntityParticleCham
     @Override
     public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing par6, float par7, float par8, float par9) {
 
-        // empty hand to show details
-        if (player.getHeldItem(hand).isEmpty()) {
-            TileEntityParticleChamber te = (TileEntityParticleChamber) world.getTileEntity(pos);
-            if (te.storage != null) {
-                if (world.isRemote) player.sendMessage(new TextComponentString("Energy stored: " + ((PMEnergyStorage) te.storage).getEnergyStored()));
-            }
+        if (player.getHeldItem(hand).getItem() instanceof ItemParticulateWrench) {
+            return false;
+        }
 
-            if (te.particle != null) {
-                if (world.isRemote) {
-                    player.sendMessage(new TextComponentString(TextFormatting.BLUE + "Particle: " + TextFormatting.WHITE + te.particle.name));
-                    player.sendMessage(new TextComponentString(TextFormatting.BLUE + "  Ticks Remaining: " + TextFormatting.WHITE + te.particle.ticks_left));
-                    player.sendMessage(new TextComponentString(TextFormatting.BLUE + "  Laser charge: " + TextFormatting.WHITE + te.getCharge()));
-                }
-            } else {
-                if (world.isRemote) player.sendMessage(new TextComponentString("Particle: null"));
-            }
-
-            return true;
+        else {
+            player.openGui(ParticulateMatter.instance, GUI_ID, world, pos.getX(), pos.getY(), pos.getZ());
         }
 
         return true;
     }
+
+//    @Override
+//    public boolean canConnectRedstone(IBlockState state, IBlockAccess world, BlockPos pos, @javax.annotation.Nullable EnumFacing side) {
+//        return true;
+//    }
 
     @SideOnly(Side.CLIENT)
     @Override

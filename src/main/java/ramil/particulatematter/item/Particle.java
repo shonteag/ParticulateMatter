@@ -1,7 +1,8 @@
-package ramil.particulatematter.particlegen;
+package ramil.particulatematter.item;
 
 
 import net.minecraft.nbt.NBTTagCompound;
+import ramil.particulatematter.chamber.EnumParticleDeath;
 
 import java.lang.Math;
 

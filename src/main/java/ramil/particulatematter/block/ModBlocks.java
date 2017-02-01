@@ -5,9 +5,14 @@ import net.minecraft.block.Block;
 import net.minecraft.item.ItemBlock;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.registry.GameRegistry;
-import ramil.particulatematter.particlegen.BlockParticleChamber;
-import ramil.particulatematter.particlegen.RendererParticleChamber;
-import ramil.particulatematter.particlegen.TileEntityParticleChamber;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import ramil.particulatematter.laser.BlockLaser;
+import ramil.particulatematter.laser.RendererLaser;
+import ramil.particulatematter.chamber.BlockParticleChamber;
+import ramil.particulatematter.chamber.RendererParticleChamber;
+import ramil.particulatematter.chamber.TileEntityParticleChamber;
+import ramil.particulatematter.laser.TileEntityLaser;
 
 public class ModBlocks {
 
@@ -18,11 +23,14 @@ public class ModBlocks {
 
     public static void init() {
         blockCentrifuge = register(new BlockCentrifuge());
-
         blockParticleChamber = register(new BlockParticleChamber());
-        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityParticleChamber.class, new RendererParticleChamber());
-
         blockLaser = register(new BlockLaser());
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static void initClient() {
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityParticleChamber.class, new RendererParticleChamber());
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityLaser.class, new RendererLaser());
     }
 
     private static <T extends Block> T register(T block, ItemBlock itemBlock) {
